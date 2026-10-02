@@ -1,0 +1,355 @@
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id               String            @id @default(cuid())
+  name             String?
+  email            String            @unique
+  password         String
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  examResults      ExamResult[]
+  wrongQuestions   WrongQuestion[]
+  learningStats    LearningStat[]
+  vocabularies     UserVocabulary[]
+  studyCheckins    StudyCheckin[]
+  wrongAnalyses    WrongQuestionAnalysis[]
+  studyPlans       StudyPlan[]
+  writingRecords   WritingRecord[]
+  translationRecords TranslationRecord[]
+  aiUsageRecords   UserAIUsage[]
+  listeningRecords ListeningRecord[]
+  profile          UserProfile?
+  membership       Membership?
+  customPapers     CustomExamPaper[]
+  userQuestions    UserQuestion[]
+  uploadedFiles    UserUploadedFile[]
+  subscriptions    Subscription[]
+}
+
+model ExamResult {
+  id             String   @id @default(cuid())
+  userId         String
+  examId         String
+  answers        String
+  score          Float
+  totalScore     Float
+  correctCount   Int
+  wrongCount     Int
+  wrongQuestions String
+  sectionResults String   @default("[]")
+  reportedScore  Float    @default(0)
+  isComplete     Boolean  @default(false)
+  examSource     String   @default("official")
+  completedAt    DateTime @default(now())
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([examId])
+}
+
+model WrongQuestion {
+  id         String   @id @default(cuid())
+  userId     String
+  examId     String
+  questionId String
+  userAnswer String
+  count      Int      @default(1)
+  lastAt     DateTime @default(now())
+  lastAnswer String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, questionId])
+  @@index([userId])
+}
+
+model LearningStat {
+  id            String   @id @default(cuid())
+  userId        String
+  date          String
+  wordsStudied  Int      @default(0)
+  questionsDone Int      @default(0)
+  correctCount  Int      @default(0)
+  studyMinutes  Int      @default(0)
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([userId])
+}
+
+model Vocabulary {
+  id           String   @id @default(cuid())
+  word         String   @unique
+  phonetic     String
+  partOfSpeech String
+  meaning      String
+  example      String
+  translation  String
+  level        String   @default("cet4")
+  createdAt    DateTime @default(now())
+  userVocabularies UserVocabulary[]
+
+  @@index([level])
+}
+
+model UserVocabulary {
+  id            String     @id @default(cuid())
+  userId        String
+  vocabularyId  String
+  status        String     @default("new")
+  reviewCount   Int        @default(0)
+  lastReviewAt  DateTime   @default(now())
+  user          User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  vocabulary    Vocabulary @relation(fields: [vocabularyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, vocabularyId])
+  @@index([userId])
+  @@index([status])
+}
+
+model StudyCheckin {
+  id            String   @id @default(cuid())
+  userId        String
+  date          String
+  questionsDone Int      @default(0)
+  wordsLearned  Int      @default(0)
+  checkin       Boolean  @default(false)
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([userId])
+  @@index([date])
+}
+
+model WrongQuestionAnalysis {
+  id              String   @id @default(cuid())
+  userId          String
+  questionId      String
+  correctAnswer   String
+  analysis        String
+  wrongOptions    String   @default("[]")
+  knowledgePoints String   @default("[]")
+  exampleSentences String  @default("[]")
+  createdAt       DateTime @default(now())
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, questionId])
+  @@index([userId])
+}
+
+model StudyPlan {
+  id                 String   @id @default(cuid())
+  userId             String
+  date               String
+  wordsTarget        Int      @default(20)
+  questionsTarget    Int      @default(10)
+  readingTarget      Int      @default(1)
+  completedWords     Int      @default(0)
+  completedQuestions Int      @default(0)
+  completedReading   Int      @default(0)
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([userId])
+}
+
+model WritingRecord {
+  id        String   @id @default(cuid())
+  userId    String
+  content   String
+  score     Int
+  feedback  String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model TranslationRecord {
+  id         String   @id @default(cuid())
+  userId     String
+  sourceText String
+  targetText String
+  analysis   String
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model UserAIUsage {
+  id               String   @id @default(cuid())
+  userId           String
+  date             String
+  writingCount     Int      @default(0)
+  translationCount Int      @default(0)
+  analysisCount    Int      @default(0)
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([userId])
+}
+
+model AIResponseCache {
+  id          String   @id @default(cuid())
+  type        String
+  contentHash String
+  response    String
+  createdAt   DateTime @default(now())
+
+  @@unique([type, contentHash])
+  @@index([type])
+  @@index([createdAt])
+}
+
+model ListeningPaper {
+  id        String              @id @default(cuid())
+  examType  String
+  year      String
+  title     String
+  audioUrl  String              @default("")
+  questions ListeningQuestion[]
+
+  @@index([examType])
+}
+
+model ListeningQuestion {
+  id         String         @id @default(cuid())
+  paperId    String
+  number     Int
+  content    String
+  options    String
+  answer     String
+  transcript String         @default("")
+  analysis   String         @default("")
+  paper      ListeningPaper @relation(fields: [paperId], references: [id], onDelete: Cascade)
+
+  @@index([paperId])
+}
+
+model ListeningRecord {
+  id           String   @id @default(cuid())
+  userId       String
+  paperId      String
+  score        Float
+  correctCount Int
+  totalCount   Int      @default(0)
+  createdAt    DateTime @default(now())
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([paperId])
+}
+
+model UserProfile {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  experience     Int      @default(0)
+  level          Int      @default(1)
+  streakDays     Int      @default(0)
+  totalStudyDays Int      @default(0)
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Membership {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  plan      String   @default("FREE")
+  status    String   @default("ACTIVE")
+  expireAt  DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Subscription {
+  id        String   @id @default(cuid())
+  userId    String
+  plan      String
+  status    String   @default("ACTIVE")
+  startAt   DateTime @default(now())
+  expireAt  DateTime
+  amount    Float    @default(0)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+}
+
+model CustomExamPaper {
+  id         String         @id @default(cuid())
+  userId     String
+  title      String
+  examType   String
+  duration   Int
+  totalScore Float
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+  user       User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  questions  PaperQuestion[]
+
+  @@index([userId])
+}
+
+model PaperQuestion {
+  id         String          @id @default(cuid())
+  paperId    String
+  questionId String
+  order      Int
+  score      Float
+  paper      CustomExamPaper @relation(fields: [paperId], references: [id], onDelete: Cascade)
+
+  @@index([paperId])
+  @@unique([paperId, questionId])
+}
+
+model UserQuestion {
+  id              String   @id @default(cuid())
+  userId          String
+  sourceType      String
+  sourceFileId    String?
+  examType        String   @default("")
+  section         String   @default("")
+  questionType    String   @default("")
+  difficulty      String   @default("medium")
+  knowledgePoints String   @default("[]")
+  tags            String   @default("[]")
+  content         String
+  options         String   @default("[]")
+  answer          String
+  analysis        String   @default("")
+  createdAt       DateTime @default(now())
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sourceFile      UserUploadedFile? @relation(fields: [sourceFileId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([sourceType])
+  @@index([sourceFileId])
+  @@index([questionType])
+  @@index([difficulty])
+}
+
+model UserUploadedFile {
+  id            String         @id @default(cuid())
+  userId        String
+  fileName      String
+  fileType      String
+  filePath      String         @default("")
+  status        String         @default("uploaded")
+  questionCount Int            @default(0)
+  processedAt   DateTime?
+  createdAt     DateTime       @default(now())
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  questions     UserQuestion[]
+
+  @@index([userId])
+}
